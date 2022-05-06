@@ -6,7 +6,7 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
 from library_api.models import Book, Author
-from library_api.serializers import BookSerializer
+from library_api.serializers import BookSerializer, AuthorSerializer
 
 
 @api_view(["GET"])
@@ -19,10 +19,17 @@ def welcome(request):
 @api_view(["GET"])
 @csrf_exempt
 def get_books(request):
-    user = request.user.id
-    books = Book.objects.filter(added_by=user)
+    books = Book.objects.all()
     serializer = BookSerializer(books, many=True)
     return JsonResponse({'books': serializer.data}, safe=False, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@csrf_exempt
+def get_authors(request):
+    authors = Author.objects.all()
+    serializer = AuthorSerializer(authors, many=True)
+    return JsonResponse({'authors': serializer.data}, safe=False, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
@@ -35,7 +42,6 @@ def add_book(request):
         book = Book.objects.create(
             title=payload["title"],
             description=payload["description"],
-            added_by=user,
             author=author
         )
         serializer = BookSerializer(book)
@@ -49,10 +55,9 @@ def add_book(request):
 @api_view(["PUT"])
 @csrf_exempt
 def update_book(request, book_id):
-    user = request.user.id
     payload = json.loads(request.body)
     try:
-        book_item = Book.objects.filter(added_by=user, id=book_id)
+        book_item = Book.objects.filter(id=book_id)
         # returns 1 or 0
         book_item.update(**payload)
         book = Book.objects.get(id=book_id)
@@ -68,9 +73,8 @@ def update_book(request, book_id):
 @api_view(["DELETE"])
 @csrf_exempt
 def delete_book(request, book_id):
-    user = request.user.id
     try:
-        book = Book.objects.get(added_by=user, id=book_id)
+        book = Book.objects.get(id=book_id)
         book.delete()
         return JsonResponse(status=status.HTTP_204_NO_CONTENT)
     except ObjectDoesNotExist as e:
